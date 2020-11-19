@@ -7,6 +7,9 @@ import csv
 from haversine import haversine
 import random
 
+max = 0
+min = 1
+
 def find_nearest_zip(points,centers):
     for c in centers:
         clat=c['coords'][1]
@@ -21,7 +24,7 @@ def find_nearest_zip(points,centers):
     return centers
 
 random.seed(42)
-k=100
+k=200
 
 points=[]
 with open("us_census3.csv", 'r') as csvfile:
@@ -47,6 +50,7 @@ file = open("csvresults.csv", 'w')
 pts = []
 ctrs = []
 ctrWeights = {}
+ctrDeviation = {}
 
 for p in points:
     p1=p["coords"]
@@ -62,10 +66,25 @@ for p in points:
     ctrs.append(tmpCenter)
     if tmpCenter in ctrWeights:
         tmp = ctrWeights[tmpCenter]
-        tmp += p['w']
+        # tmp += p['w'] add weight
+        tmp += 1
         ctrWeights[tmpCenter] = tmp
+        if tmp > max:
+            max = tmp
+        if tmp < min:
+            min = tmp
     else:
-        ctrWeights[tmpCenter] = p['w']
+        ctrWeights[tmpCenter] = 1
+    deviation = math.sqrt(math.pow((p["coords"][1] - tmpCenter[0]), 2) + math.pow((p["coords"][0] - tmpCenter[1]), 2))
+    if tmpCenter in ctrDeviation:
+        tmpDeviation = ctrDeviation[tmpCenter]
+        tmp1 = tmpDeviation[0]
+        tmp2 = tmpDeviation[1]
+        tmp1 += deviation
+        tmp2 += 1
+        ctrDeviation[tmpCenter] = (tmp1, tmp2)
+    else:
+        ctrDeviation[tmpCenter] = (deviation, 1)
     print (",".join([str(s) for s in out]), file=file)
 
 file.close()
@@ -102,6 +121,8 @@ for ctr in ctrs:
     lat = ctr[0]
     long = ctr[1]
     x,y = m(long, lat)
-    plt.scatter(x, y, s=ctrWeights.get(ctr)/25000, c="red", edgecolors="yellow", zorder = 3)
+    # plt.scatter(x, y, s=ctrWeights.get(ctr)/25000, c="red", edgecolors="yellow", zorder = 3)
+    normalized = (ctrWeights.get(ctr) - min) / (max - min)
+    plt.scatter(x, y, c="red", s = (ctrDeviation[ctr][0]/ctrDeviation[ctr][1])*10, zorder = 3, alpha = normalized)
 
 plt.show()
